@@ -24,42 +24,35 @@ namespace Solvers
                 BinaryHeap<int, int> priorityQueue = new BinaryHeap<int, int>(PriorityQueueType.Minimum);
                 IPriorityQueueEntry<int>[] entries = Enumerable.Range(0, size).Select(t => priorityQueue.Enqueue(t, weights[t])).ToArray();
 
-                while (priorityQueue.Count > 0)
+                while (priorityQueue.Count > 0) // dijkstra
                 {
-                    var currentColumn = priorityQueue.Dequeue();
+                    int currentColumn = priorityQueue.Dequeue();
 
-                    if (assignedRow[currentColumn] == -1)
+                    if (assignedRow[currentColumn] == -1) // goal: free column found
                     {
-                        for (int column = 0; column < size; column++)
+                        for (int column = 0; column < size; column++) // update dual variables
                         {
                             if (!scanned[column]) continue;
                             duals[column] += weights[column] - weights[currentColumn];
                         }
 
-                        var augmentingPathColumn = currentColumn;
-
-                        while (true)
+                        while (previousColumn[currentColumn] != -1) // update assignments along the alternating path
                         {
-                            if (previousColumn[augmentingPathColumn] == -1)
-                            {
-                                assignedRow[augmentingPathColumn] = row;
-                                assignedColumn[row] = augmentingPathColumn;
-                                break;
-                            }
-
-                            assignedRow[augmentingPathColumn] = assignedRow[previousColumn[augmentingPathColumn]];
-                            assignedColumn[assignedRow[previousColumn[augmentingPathColumn]]] = augmentingPathColumn;
-                            augmentingPathColumn = previousColumn[augmentingPathColumn];
+                            assignedRow[currentColumn] = assignedRow[previousColumn[currentColumn]];
+                            assignedColumn[assignedRow[previousColumn[currentColumn]]] = currentColumn;
+                            currentColumn = previousColumn[currentColumn];
                         }
 
+                        assignedRow[currentColumn] = row;
+                        assignedColumn[row] = currentColumn;
                         break;
                     }
 
-                    for (int nextColumn = 0; nextColumn < size; nextColumn++)
+                    for (int nextColumn = 0; nextColumn < size; nextColumn++) // expand
                     {
                         if (scanned[nextColumn] || nextColumn == currentColumn) continue;
 
-                        int weight = costs[assignedRow[currentColumn], nextColumn] - duals[nextColumn] - 
+                        int weight = costs[assignedRow[currentColumn], nextColumn] - duals[nextColumn] - // weight >= 0
                                     (costs[assignedRow[currentColumn], currentColumn] - duals[currentColumn]);
 
                         if (weights[currentColumn] + weight < weights[nextColumn])
@@ -69,6 +62,7 @@ namespace Solvers
                             priorityQueue.UpdatePriority(entries[nextColumn], weights[nextColumn]);
                         }
                     }
+
                     scanned[currentColumn] = true;
                 }   
             }
